@@ -7,7 +7,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV COPPELIASIM_ROOT_DIR=/opt/coppeliaSim
 ENV PATH="/opt/coppeliaSim:${PATH}"
 
-# 1. Install foundational system utilities & repositories
+# 1. Install foundational system utilities, repositories, and ALL precompiled locales
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     wget \
@@ -16,6 +16,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     lsb-release \
     software-properties-common \
     ca-certificates \
+    locales \
+    locales-all \
     && add-apt-repository universe \
     && apt-get update \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
