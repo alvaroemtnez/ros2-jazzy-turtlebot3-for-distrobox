@@ -3,9 +3,6 @@ FROM ubuntu:24.04
 # Prevent interactive prompts during installation
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Use bash for execution blocks to allow sourcing files
-SHELL ["/bin/bash", "-c"]
-
 # 1. Install foundational system utilities & repositories
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
@@ -68,13 +65,13 @@ RUN mkdir -p /opt/coppeliaSim \
     && rm /tmp/coppeliaSim.tar.xz
 
 # 5. Clone and build the simROS2 interface
-RUN source /opt/ros/jazzy/setup.bash \
+RUN bash -c "source /opt/ros/jazzy/setup.bash \
     && cd /opt \
     && git clone https://github.com/CoppeliaRobotics/simROS2.git sim_ros2_interface \
     && cd sim_ros2_interface \
     && git checkout coppeliasim-v4.10.0-rev0 \
-    && echo "geometry_msgs/msg/TwistStamped" >> meta/interfaces.txt \
-    && colcon build --symlink-install
+    && echo 'geometry_msgs/msg/TwistStamped' >> meta/interfaces.txt \
+    && colcon build --symlink-install"
 
 # 6. Configure environment variables inside global bashrc for Distrobox integration
 RUN cat << 'EOF' >> /etc/bash.bashrc
