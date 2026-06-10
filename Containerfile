@@ -99,5 +99,10 @@ export COPPELIASIM_ROOT_DIR=/opt/coppeliaSim
 export PATH=$PATH:/opt/coppeliaSim
 EOF
 
+# Fix locale mismatch on container generation using distrobox
+RUN dpkg-divert --divert /usr/sbin/update-locale.distrib --rename /usr/sbin/update-locale \
+    && printf '#!/bin/bash\nexit 0\n' > /usr/sbin/update-locale \
+    && chmod +x /usr/sbin/update-locale
+
 WORKDIR /workspace
 CMD ["/bin/bash"]
