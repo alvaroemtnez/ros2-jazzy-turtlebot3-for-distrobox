@@ -3,6 +3,10 @@ FROM ubuntu:24.04
 # Prevent interactive prompts during installation
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Define CoppeliaSim environment variables properly (Build + Runtime visibility)
+ENV COPPELIASIM_ROOT_DIR=/opt/coppeliaSim
+ENV PATH="/opt/coppeliaSim:${PATH}"
+
 # 1. Install foundational system utilities & repositories
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
