@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     lsb-release \
     software-properties-common \
     ca-certificates \
+    nano vim \
     locales \
     locales-all \
     && add-apt-repository universe \
@@ -79,7 +80,81 @@ RUN bash -c "source /opt/ros/jazzy/setup.bash \
     && echo 'geometry_msgs/msg/TwistStamped' >> meta/interfaces.txt \
     && colcon build --symlink-install"
 
-# 6. Configure environment variables inside global bashrc for Distrobox integration
+# 6. Embed the optimized network toggle helper script into the image
+RUN cat << 'EOF' > /opt/toggle_discovery.sh
+#!/bin/bash
+
+ARG1=$1
+PORT=${2:-11811}
+XML_FILE="/tmp/fastdds_super_client.xml"
+
+# Help Menu / Usage info showing the custom terminal aliases
+show_help() {
+    echo "ROS 2 Discovery Server Network Switcher"
+    echo "======================================="
+    echo "Usage to connect:    discovery_server [SERVER_IP] [OPTIONAL_PORT]"
+    echo "Usage to disconnect: discovery_server disable"
+}
+
+if [ -z "$ARG1" ] || [ "$ARG1" = "-h" ] || [ "$ARG1" = "--help" ]; then
+    show_help
+    return 0 2>/dev/null || exit 0
+fi
+
+if [ "$ARG1" = "disable" ]; then
+    echo "=> Reverting network setup to standard multicast..."
+    unset ROS_DISCOVERY_SERVER
+    unset FASTRTPS_DEFAULT_PROFILES_FILE
+    rm -f "$XML_FILE"
+    echo "=> Restarting ROS 2 daemon..."
+    ros2 daemon stop && ros2 daemon start
+    echo "=> Success! Standard multicast active."
+else
+    # If it isn't "disable", the first argument must be an IP address
+    SERVER_IP=$ARG1
+    echo "=> Configuring ROS 2 to use Discovery Server at $SERVER_IP:$PORT..."
+    
+    cat <<XML > "$XML_FILE"
+<?xml version="1.0" encoding="UTF-8" ?>
+<dds>
+    <profiles xmlns="http://www.eprosima.com/XMLSchemas/fastRTPS_Profiles">
+        <participant profile_name="super_client_profile" is_default_profile="true">
+            <rtps>
+                <builtin>
+                    <discovery_config>
+                        <discoveryProtocol>SUPER_CLIENT</discoveryProtocol>
+                        <discoveryServersList>
+                            <RemoteServer prefix="44.53.00.5f.45.50.52.4f.53.49.4d.41">
+                                <metatrafficUnicastLocatorList>
+                                    <locator>
+                                        <udpv4>
+                                            <address>$SERVER_IP</address>
+                                            <port>$PORT</port>
+                                        </udpv4>
+                                    </locator>
+                                </metatrafficUnicastLocatorList>
+                            </RemoteServer>
+                        </discoveryServersList>
+                    </discovery_config>
+                </builtin>
+            </rtps>
+        </participant>
+    </profiles>
+</dds>
+XML
+
+    export ROS_DISCOVERY_SERVER="$SERVER_IP:$PORT"
+    export FASTRTPS_DEFAULT_PROFILES_FILE="$XML_FILE"
+    echo "=> Exported ROS_DISCOVERY_SERVER=$ROS_DISCOVERY_SERVER"
+    echo "=> Exported FASTRTPS_DEFAULT_PROFILES_FILE=$FASTRTPS_DEFAULT_PROFILES_FILE"
+    echo "=> Restarting ROS 2 daemon..."
+    ros2 daemon stop && ros2 daemon start
+    echo "=> Success! Super Client mode active."
+fi
+EOF
+RUN chmod +x /opt/toggle_discovery.sh
+
+# 7. Configure environment variables inside global bashrc for Distrobox integration
 RUN cat << 'EOF' >> /etc/bash.bashrc
 
 # ROS2 & Turtlebot Configuration
@@ -99,6 +174,9 @@ fi
 # CoppeliaSim Paths
 export COPPELIASIM_ROOT_DIR=/opt/coppeliaSim
 export PATH=$PATH:/opt/coppeliaSim
+
+# Discovery Server Aliases
+alias discovery_server='source /opt/toggle_discovery.sh'
 EOF
 
 # Fix locale mismatch on container generation using distrobox
