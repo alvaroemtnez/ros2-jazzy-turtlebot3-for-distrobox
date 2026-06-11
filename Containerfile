@@ -175,6 +175,25 @@ alias discovery-server='source /opt/toggle_discovery.sh'
 # Show Config
 echo "ROS_DISTRO=$ROS_DISTRO"
 echo "ROS_DOMAIN_ID=$ROS_DOMAIN_ID"
+
+# ---------- PROMPT_COMMAND hook (array form) ----------
+_ros_env_restore() {
+    # Already fixed in this shell – skip
+    [ -n "${_ROS_ENV_RESTORED:-}" ] && return 0
+
+    if ! command -v ros2 >/dev/null 2>&1; then
+        source /opt/ros/jazzy/setup.bash
+        source /opt/sim_ros2_interface/install/setup.bash
+        export PATH=$PATH:/opt/coppeliaSim
+    fi
+
+    export _ROS_ENV_RESTORED=1
+}
+
+# Set PROMPT_COMMAND as an array so that later scripts (vte) append to it,
+# instead of overwriting it.
+PROMPT_COMMAND=()
+PROMPT_COMMAND+=("_ros_env_restore")
 EOF
 
 # Fix locale mismatch on container generation using distrobox
