@@ -206,3 +206,15 @@ docker build -t ros2-jazzy-turtlebot3-for-distrobox:latest -f Containerfile .
 * **Base Layer:** Ubuntu 24.04 LTS (Noble Numbat)
 * **Robotics Stack:** `ros-jazzy-desktop`, `ros-jazzy-navigation2`, `ros-jazzy-cartographer`, `ros-jazzy-slam-toolbox`, and TurtleBot3 support binaries.
 * **Simulators:** Gazebo Harmonic & CoppeliaSim Edu V4.10.0.
+
+---
+
+## Wayland / X11
+
+Wayland APIs for Qt (qt6-wayland and qwayland5) are not included in this image. Most of the graphical interfaces use X11. Everything has been tested and working in Wayland-only distros, using XWayland.
+
+---
+
+## AI Use Disclosure
+
+This project was made with the assistance of AI development tools (Gemini 3.1 Pro and 3.5 Flash, Claude Sonnet 4.6 Max and Deepseek V4 Pro) to accelerate coding and documentation. All generated code has been manually reviewed and thoroughly tested to ensure functionality and security.
