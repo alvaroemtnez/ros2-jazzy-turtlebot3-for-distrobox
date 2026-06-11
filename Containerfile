@@ -113,9 +113,9 @@ else
     # If it isn't "disable", the first argument must be an IP address
     SERVER_IP=$ARG1
 
-    # Port sanity check
-    if ! [[ "$PORT" =~ ^[0-9]+$ ]] || [ "$PORT" -lt 1 ] || [ "$PORT" -gt 65535 ]; then
-        echo "Error: Invalid port number '$PORT'. Port must be an integer between 1 and 65535."
+    # Port sanity check (Enforcing restricted range 1025-65535)
+    if ! [[ "$PORT" =~ ^[0-9]+$ ]] || [ "$PORT" -lt 1025 ] || [ "$PORT" -gt 65535 ]; then
+        echo "Error: Invalid port number '$PORT'. Port must be an integer between 1025 and 65535."
         return 1 2>/dev/null || exit 1
     fi
 
