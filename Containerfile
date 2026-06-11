@@ -112,6 +112,13 @@ if [ "$ARG1" = "disable" ]; then
 else
     # If it isn't "disable", the first argument must be an IP address
     SERVER_IP=$ARG1
+
+    # Port sanity check
+    if ! [[ "$PORT" =~ ^[0-9]+$ ]] || [ "$PORT" -lt 1 ] || [ "$PORT" -gt 65535 ]; then
+        echo "Error: Invalid port number '$PORT'. Port must be an integer between 1 and 65535."
+        return 1 2>/dev/null || exit 1
+    fi
+
     echo "=> Configuring ROS 2 to use Discovery Server at $SERVER_IP:$PORT..."
     
     cat <<XML > "$XML_FILE"
