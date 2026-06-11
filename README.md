@@ -21,9 +21,17 @@ sudo apt update && sudo apt install -y podman distrobox
 ```
 
 
-* **Fedora Workstation / Silverblue:**
+* **Fedora Workstation:**
 ```bash
 sudo dnf install -y podman distrobox
+
+```
+
+
+* **Fedora Atomic (Silverblue, Kinoite, etc.):**
+```bash
+rpm-ostree install podman distrobox
+reboot
 
 ```
 
