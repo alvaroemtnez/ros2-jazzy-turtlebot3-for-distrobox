@@ -6,9 +6,62 @@ It is specifically optimized for containerized deployment via **Distrobox** on i
 
 ---
 
+## Host Prerequisites
+
+Before jumping into the Quick Start guide, you must ensure your host operating system has both a container engine (Podman or Docker) and Distrobox installed.
+
+### Linux Hosts
+
+Install Podman and Distrobox using your distribution's native package manager:
+
+* **Ubuntu / Debian / Linux Mint:**
+```bash
+sudo apt update && sudo apt install -y podman distrobox
+
+```
+
+
+* **Fedora Workstation / Silverblue:**
+```bash
+sudo dnf install -y podman distrobox
+
+```
+
+
+* **Arch Linux:**
+```bash
+sudo pacman -S podman distrobox
+
+```
+
+
+
+### Windows Hosts (WSL2)
+
+Windows users must set up a WSL2 environment capable of running containers and GUI applications (WSLg):
+
+1. **Install WSL2:** Open PowerShell as Administrator and run:
+```powershell
+wsl --install -d Ubuntu
+
+```
+
+
+*Note: Windows 11 (or modern Windows 10) is highly recommended for automatic, high-performance GUI support.*
+2. **Open your WSL2 Terminal:** After rebooting, launch **Ubuntu** from your Windows Start Menu to finish the initialization (it will prompt you to create a Linux username and password).
+3. **Install Container Engine & Distrobox:** Run the following commands inside your new Ubuntu terminal:
+```bash
+sudo apt update && sudo apt install -y podman distrobox
+
+```
+
+
+
+---
+
 ## Quick Start Guide (Pull & Run)
 
-If you just want to pull the pre-built image and start developing immediately using **Distrobox**, follow these steps.
+Once your host prerequisites are met, follow these steps to initialize and enter the robotics environment.
 
 ### 1. Create the Distrobox Container
 
@@ -65,30 +118,6 @@ discovery_server
 ```
 
 
-
----
-
-## Windows (WSL2) Prerequisites
-
-Before jumping into the Quick Start guide, Windows users must set up a WSL2 host environment capable of running containers and GUI apps.
-
-1. **Install WSL2:** Open PowerShell as Administrator and run:
-```powershell
-wsl --install -d Ubuntu
-
-```
-*Note: This command installs the WSL framework and downloads Ubuntu as the default Linux distribution. Windows 11 (or modern Windows 10) is highly recommended for automatic, high-performance GUI support (WSLg).*
-2. **Open your WSL2 Terminal:** After **rebooting**, launch **Ubuntu** from your Windows Start Menu. A terminal window will open to finish the installation (this initial setup may take a minute and will ask you to create a Linux username and password).
-3. **Install Container Engine & Distrobox:** Run the following commands inside your new Ubuntu terminal to install the underlying container tools:
-```bash
-sudo apt update
-sudo apt install -y podman distrobox
-
-```
-
-
-
-Once these steps are done, you can follow the exact same Linux instructions below directly inside your WSL2 terminal.
 
 ---
 
