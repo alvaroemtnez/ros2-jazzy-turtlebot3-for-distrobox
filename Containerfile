@@ -92,8 +92,8 @@ XML_FILE="/tmp/fastdds_super_client.xml"
 show_help() {
     echo "ROS 2 Discovery Server Network Switcher"
     echo "======================================="
-    echo "Usage to connect:    discovery_server [SERVER_IP] [OPTIONAL_PORT]"
-    echo "Usage to disconnect: discovery_server disable"
+    echo "Usage to connect:    discovery-server [SERVER_IP] [OPTIONAL_PORT]"
+    echo "Usage to disconnect: discovery-server disable"
 }
 
 if [ -z "$ARG1" ] || [ "$ARG1" = "-h" ] || [ "$ARG1" = "--help" ]; then
@@ -156,27 +156,25 @@ RUN chmod +x /opt/toggle_discovery.sh
 
 # 7. Configure environment variables inside global bashrc for Distrobox integration
 RUN cat << 'EOF' >> /etc/bash.bashrc
-
 # ROS2 & Turtlebot Configuration
 source /opt/ros/jazzy/setup.bash
-export TURTLEBOT3_MODEL=burger
-export LDS_MODEL=LDS-02
-
-echo "ROS_DISTRO=$ROS_DISTRO"
-
-export ROS_DOMAIN_ID=0
-echo "ROS_DOMAIN_ID=$ROS_DOMAIN_ID"
-
-if [ -f "/opt/sim_ros2_interface/install/setup.bash" ]; then
-    source /opt/sim_ros2_interface/install/setup.bash
-fi
+source /opt/sim_ros2_interface/install/setup.bash
 
 # CoppeliaSim Paths
 export COPPELIASIM_ROOT_DIR=/opt/coppeliaSim
 export PATH=$PATH:/opt/coppeliaSim
 
+# ENV variables
+export TURTLEBOT3_MODEL=burger
+export LDS_MODEL=LDS-02
+export ROS_DOMAIN_ID=0
+
 # Discovery Server Aliases
-alias discovery_server='source /opt/toggle_discovery.sh'
+alias discovery-server='source /opt/toggle_discovery.sh'
+
+# Show Config
+echo "ROS_DISTRO=$ROS_DISTRO"
+echo "ROS_DOMAIN_ID=$ROS_DOMAIN_ID"
 EOF
 
 # Fix locale mismatch on container generation using distrobox
