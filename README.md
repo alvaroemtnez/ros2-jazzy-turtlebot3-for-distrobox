@@ -15,10 +15,7 @@ If you just want to pull the pre-built image and start developing immediately us
 Pull the container image from the registry and initialize it. This command isolates your environment configuration to a clean local directory while sharing necessary display and device hooks.
 
 ```bash
-distrobox create \
-  --image registre.etsinf.upv.es/ros2-jazzy-turtlebot3-for-distrobox:latest \
-  --name ros2-tb3 \
-  --home ~/.ros2-tb3_home
+distrobox create --image registre.etsinf.upv.es/ros2-jazzy-turtlebot3-for-distrobox:latest --name ros2-tb3
 
 ```
 
