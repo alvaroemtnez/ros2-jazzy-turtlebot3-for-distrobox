@@ -129,6 +129,46 @@ discovery_server
 
 ---
 
+## Upgrading the Container
+
+There are two distinct ways to handle updates depending on whether you want to quickly refresh internal software or pull down a freshly published base image from the server.
+
+### Method 1: Upgrading Core Packages on the Fly
+
+If you want to pull down incremental package upgrades inside the active environment without changing the structural underlying layout, you can prompt Distrobox to run an internal package sync:
+
+```bash
+distrobox-upgrade ros2-tb3
+
+```
+
+*Note: This utilizes Ubuntu's `apt` manager directly behind the scenes inside your box.*
+
+### Method 2: Updating to a Fresh Base Image Registry Build
+
+When a completely new version of the base image is pushed to the server registry (containing updated simulator architectures or pre-configured software stacks), you should reconstruct the environment container.
+
+> **Important Data Note:** Because Distrobox completely matches and shares your host `$HOME` directory space, **removing the box will not touch your personal files, workspace project folders, or configuration files.**
+
+Run these commands on your host system terminal (or WSL terminal):
+
+```bash
+# 1. Force pull the newest layers from the server
+podman pull registre.etsinf.upv.es/ros2-jazzy-turtlebot3-for-distrobox:latest
+
+# 2. Halt the existing container instance
+distrobox stop ros2-tb3
+
+# 3. Wipe out the old local structural instantiation
+distrobox rm ros2-tb3
+
+# 4. Instantiate a brand new instance tracking the new image base
+distrobox create --image registre.etsinf.upv.es/ros2-jazzy-turtlebot3-for-distrobox:latest --name ros2-tb3
+
+```
+
+---
+
 ## How to Build from Source
 
 If you want to modify the packages, add custom dependencies, or host the image on your own container registry, you can build it locally using either **Podman** or **Docker**.
