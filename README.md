@@ -2,7 +2,7 @@
 
 This repository contains the configuration to build and run a fully integrated robotics development and simulation environment. Built on top of **Ubuntu 24.04**, this container packages **ROS2 Jazzy**, **Gazebo Harmonic**, and **CoppeliaSim Edu v4.10.0**.
 
-It is specifically optimized for cloud or local containerized deployment via **Distrobox** on immutable or traditional Linux distributions (like Fedora Silverblue, Ubuntu, or Arch). It provides out-of-the-box hardware graphics acceleration, shared network spaces for ROS2 DDS discovery, and seamless X11/Wayland display forwarding.
+It is specifically optimized for containerized deployment via **Distrobox** on immutable/traditional Linux distributions (like Fedora Silverblue, Ubuntu, or Arch) and **Windows via WSL2**. It provides out-of-the-box hardware graphics acceleration, shared network spaces for ROS2 DDS discovery, and seamless GUI display forwarding.
 
 ---
 
@@ -30,11 +30,65 @@ distrobox enter ros2-tb3
 
 ### 3. Launching Applications
 
-Once inside the container, you can run graphical applications as if they were natively installed on your host system:
+Once inside the container, you can run graphical applications seamlessly. If you are on Windows, these apps will pop up as individual, hardware-accelerated Windows desktop applications:
 
 * **Open RViz2:** `rviz2`
 * **Open CoppeliaSim:** `coppeliaSim.sh`
 * **Open Gazebo:** `gz sim`
+
+---
+
+## Network Switching (Discovery Server vs. Multicast)
+
+This container includes a built-in helper network toggle utility mapped to a single, simple terminal alias.
+
+If you are developing across multiple machines (or bridging your WSL2 environment to an external physical robot), you can bypass standard multicast discovery to reduce network overhead:
+
+* **Switch to Discovery Server mode:**
+```bash
+discovery_server [SERVER_IP]
+
+```
+
+
+* **Revert back to standard multicast:**
+```bash
+discovery_server disable
+
+```
+
+
+* **View the network help menu:**
+```bash
+discovery_server
+
+```
+
+
+
+---
+
+## Windows (WSL2) Prerequisites
+
+Before jumping into the Quick Start guide, Windows users must set up a WSL2 host environment capable of running containers and GUI apps.
+
+1. **Install WSL2:** Open PowerShell as Administrator and run:
+```powershell
+wsl --install -d Ubuntu
+
+```
+*Note: This command installs the WSL framework and downloads Ubuntu as the default Linux distribution. Windows 11 (or modern Windows 10) is highly recommended for automatic, high-performance GUI support (WSLg).*
+2. **Open your WSL2 Terminal:** After **rebooting**, launch **Ubuntu** from your Windows Start Menu. A terminal window will open to finish the installation (this initial setup may take a minute and will ask you to create a Linux username and password).
+3. **Install Container Engine & Distrobox:** Run the following commands inside your new Ubuntu terminal to install the underlying container tools:
+```bash
+sudo apt update
+sudo apt install -y podman distrobox
+
+```
+
+
+
+Once these steps are done, you can follow the exact same Linux instructions below directly inside your WSL2 terminal.
 
 ---
 
@@ -54,7 +108,7 @@ cd ros2-jazzy-turtlebot3-for-distrobox
 
 Ensure your system has internet access, as the build process pulls down heavy graphics binaries, ROS2 core desktops, and compiler suites.
 
-**Using Podman (Recommended for Fedora/Silverblue):**
+**Using Podman (Recommended):**
 
 ```bash
 podman build -t ros2-jazzy-turtlebot3-for-distrobox:latest -f Containerfile .
