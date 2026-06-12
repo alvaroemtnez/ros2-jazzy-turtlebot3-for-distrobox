@@ -42,8 +42,6 @@ sudo pacman -S podman distrobox
 
 ```
 
-
-
 ### Windows Hosts (WSL2)
 
 Windows users must set up a WSL2 environment capable of running containers and GUI applications (WSLg):
@@ -53,17 +51,17 @@ Windows users must set up a WSL2 environment capable of running containers and G
 wsl --install -d Ubuntu
 
 ```
+It will prompt you to create a username and password for the Ubuntu VM.
 
+2. **Enable Mirrored Network Mode:** Open WSL Settings from the Windows Start Menu and in the "Network" tab, change the network mode to "Mirrored". This is required to make networking with other ROS2 instances work (i.e.: connect to a Turtlebot 3), as ROS2 must know the host's IP address.
 
-*Note: Windows 11 (or modern Windows 10) is highly recommended for automatic, high-performance GUI support.*
-2. **Open your WSL2 Terminal:** After rebooting, launch **Ubuntu** from your Windows Start Menu to finish the initialization (it will prompt you to create a Linux username and password).
-3. **Install Container Engine & Distrobox:** Run the following commands inside your new Ubuntu terminal:
+3. **Open your WSL2 Terminal:** Launch WSL from your Windows Start Menu.
+
+4. **Install Container Engine & Distrobox:** Run the following commands inside your new Ubuntu terminal:
 ```bash
 sudo apt update && sudo apt install -y podman distrobox
 
 ```
-
-
 
 ---
 

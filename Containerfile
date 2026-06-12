@@ -183,6 +183,14 @@ alias discovery-server='source /opt/toggle_discovery.sh'
 echo "ROS_DISTRO=$ROS_DISTRO"
 echo "ROS_DOMAIN_ID=$ROS_DOMAIN_ID"
 
+# Clean fix for WSL2 Mirrored Mode loopback timeout bug
+# Only executes if the underlying host is Windows/WSL
+if grep -qi microsoft /proc/version 2>/dev/null; then
+    if command -v ros2 >/dev/null 2>&1; then
+        ros2 daemon start >/dev/null 2>&1
+    fi
+fi
+
 # ---------- PROMPT_COMMAND hook (array form) ----------
 _ros_env_restore() {
     # Already fixed in this shell – skip
