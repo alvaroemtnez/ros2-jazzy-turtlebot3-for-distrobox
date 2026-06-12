@@ -105,21 +105,21 @@ If you are developing across multiple machines (or bridging your WSL2 environmen
 
 * **Switch to Discovery Server mode:**
 ```bash
-discovery_server [SERVER_IP]
+discovery-server [SERVER_IP]
 
 ```
 
 
 * **Revert back to standard multicast:**
 ```bash
-discovery_server disable
+discovery-server disable
 
 ```
 
 
 * **View the network help menu:**
 ```bash
-discovery_server
+discovery-server
 
 ```
 
