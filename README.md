@@ -53,7 +53,7 @@ wsl --install -d Ubuntu
 ```
 It will prompt you to create a username and password for the Ubuntu VM.
 
-2. **Enable Mirrored Network Mode:** Open WSL Settings from the Windows Start Menu and in the "Network" tab, change the network mode to "Mirrored". This is required to make networking with other ROS2 instances work (i.e.: connect to a Turtlebot 3), as ROS2 must know the host's IP address.
+2. **(Only if connecting to other ROS2 instances) Enable Mirrored Network Mode and Disable Firewall:** Open WSL Settings from the Windows Start Menu and in the "Network" tab, change the network mode to "Mirrored". This is required to make networking with other ROS2 instances work (i.e.: connect to a Turtlebot 3), as ROS2 must know the host's IP address. Also, **disable the Windows Defender firewall** or whitelist WSL, as the firewall cuts all connections ROS2 uses.
 
 3. **Open your WSL2 Terminal:** Launch WSL from your Windows Start Menu.
 
