@@ -3,11 +3,15 @@ FROM ubuntu:24.04
 # Prevent interactive prompts during installation
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Fix broken accents (locales) and force universal UTF-8 encoding
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
+
 # Define CoppeliaSim environment variables properly (Build + Runtime visibility)
 ENV COPPELIASIM_ROOT_DIR=/opt/coppeliaSim
 ENV PATH="/opt/coppeliaSim:${PATH}"
 
-# 1. Install foundational system utilities, repositories, and ALL precompiled locales
+# 1. Install foundational system utilities, repositories, zsh, and ALL precompiled locales
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     wget \
@@ -17,6 +21,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     software-properties-common \
     ca-certificates \
     nano vim \
+    zsh \
     locales \
     locales-all \
     && add-apt-repository universe \
@@ -89,7 +94,6 @@ PORT=${2:-11811}
 XML_FILE="/tmp/fastdds_super_client.xml"
 ENV_FILE="/tmp/ros2_discovery_env.sh"
 
-# Help Menu / Usage info showing the custom terminal aliases
 show_help() {
     echo "ROS 2 Discovery Server Network Switcher"
     echo "======================================="
@@ -111,10 +115,8 @@ if [ "$ARG1" = "disable" ]; then
     ros2 daemon stop && ros2 daemon start
     echo "=> Success! Standard multicast active."
 else
-    # If it isn't "disable", the first argument must be an IP address
     SERVER_IP=$ARG1
 
-    # Port sanity check (Enforcing restricted range 1025-65535)
     if ! [[ "$PORT" =~ ^[0-9]+$ ]] || [ "$PORT" -lt 1025 ] || [ "$PORT" -gt 65535 ]; then
         echo "Error: Invalid port number '$PORT'. Port must be an integer between 1025 and 65535."
         return 1 2>/dev/null || exit 1
@@ -151,11 +153,9 @@ else
 </dds>
 XML
 
-    # Create the environment file for new terminals to source
     echo "export ROS_DISCOVERY_SERVER=\"$SERVER_IP:$PORT\"" > "$ENV_FILE"
     echo "export FASTRTPS_DEFAULT_PROFILES_FILE=\"$XML_FILE\"" >> "$ENV_FILE"
 
-    # Export for the current terminal
     export ROS_DISCOVERY_SERVER="$SERVER_IP:$PORT"
     export FASTRTPS_DEFAULT_PROFILES_FILE="$XML_FILE"
     
@@ -168,11 +168,29 @@ fi
 EOF
 RUN chmod +x /opt/toggle_discovery.sh
 
-# 7. Configure environment variables inside global bashrc for Distrobox integration
-RUN cat << 'EOF' >> /etc/bash.bashrc
+# 7. Create the master ROS configuration script
+RUN cat << 'EOF' > /opt/ros_env.sh
 # ROS2 & Turtlebot Configuration
-source /opt/ros/jazzy/setup.bash
-source /opt/sim_ros2_interface/install/setup.bash
+# Detect the active shell and source the heavily optimized ROS 2 setup script
+if [ -n "$ZSH_VERSION" ]; then
+    # Zsh detected
+    source /opt/ros/jazzy/setup.zsh
+elif [ -n "$BASH_VERSION" ]; then
+    # Bash detected
+    source /opt/ros/jazzy/setup.bash
+else
+    # Fallback for standard sh/dash
+    source /opt/ros/jazzy/setup.sh
+fi
+
+# Do the same for simROS2 interface
+if [ -n "$ZSH_VERSION" ] && [ -f /opt/sim_ros2_interface/install/setup.zsh ]; then
+    source /opt/sim_ros2_interface/install/setup.zsh
+elif [ -n "$BASH_VERSION" ] && [ -f /opt/sim_ros2_interface/install/setup.bash ]; then
+    source /opt/sim_ros2_interface/install/setup.bash
+elif [ -f /opt/sim_ros2_interface/install/setup.sh ]; then
+    source /opt/sim_ros2_interface/install/setup.sh
+fi
 
 # CoppeliaSim Paths
 export COPPELIASIM_ROOT_DIR=/opt/coppeliaSim
@@ -191,44 +209,69 @@ if [ -f "/tmp/ros2_discovery_env.sh" ]; then
     source /tmp/ros2_discovery_env.sh
 fi
 
-# Discovery Server Aliases
+# System Aliases
 alias discovery-server='source /opt/toggle_discovery.sh'
 
-# Show Config
-echo "ROS_DISTRO=$ROS_DISTRO"
-if [ -n "$ROS_DISCOVERY_SERVER" ]; then
-    echo "ROS_DISCOVERY_SERVER=$ROS_DISCOVERY_SERVER"
-else
-    echo "ROS_DOMAIN_ID=$ROS_DOMAIN_ID"
+# Show Config (Only print in interactive shells to avoid breaking scp/rsync)
+if [ -n "$PS1" ] || [ -n "$ZSH_VERSION" ]; then
+    echo "ROS_DISTRO=$ROS_DISTRO"
+    if [ -n "$ROS_DISCOVERY_SERVER" ]; then
+        echo "ROS_DISCOVERY_SERVER=$ROS_DISCOVERY_SERVER"
+    else
+        echo "ROS_DOMAIN_ID=$ROS_DOMAIN_ID"
+    fi
+    
+    # Warning block for ZSH users regarding workspaces
+    if [ -n "$ZSH_VERSION" ]; then
+        echo "--------------------------------------------------------"
+        echo " [!] ZSH Detected:                                      "
+        echo "     If you compile a custom workspace, remember to     "
+        echo "     source 'install/setup.zsh' instead of setup.bash!  "
+        echo "--------------------------------------------------------"
+    fi
 fi
 
 # Clean fix for WSL2 Mirrored Mode loopback timeout bug
-# Only executes if the underlying host is Windows/WSL
 if grep -qi microsoft /proc/version 2>/dev/null; then
     if command -v ros2 >/dev/null 2>&1; then
         ros2 daemon start >/dev/null 2>&1
     fi
 fi
 
-# ---------- PROMPT_COMMAND hook (array form) ----------
+# ---------- Shell Agnostic Environment Restore Hook ----------
 _ros_env_restore() {
-    # Already fixed in this shell – skip
     [ -n "${_ROS_ENV_RESTORED:-}" ] && return 0
-
     if ! command -v ros2 >/dev/null 2>&1; then
-        source /opt/ros/jazzy/setup.bash
-        source /opt/sim_ros2_interface/install/setup.bash
+        if [ -n "$ZSH_VERSION" ]; then
+            source /opt/ros/jazzy/setup.zsh
+            [ -f /opt/sim_ros2_interface/install/setup.zsh ] && source /opt/sim_ros2_interface/install/setup.zsh
+        elif [ -n "$BASH_VERSION" ]; then
+            source /opt/ros/jazzy/setup.bash
+            [ -f /opt/sim_ros2_interface/install/setup.bash ] && source /opt/sim_ros2_interface/install/setup.bash
+        else
+            source /opt/ros/jazzy/setup.sh
+            [ -f /opt/sim_ros2_interface/install/setup.sh ] && source /opt/sim_ros2_interface/install/setup.sh
+        fi
         export PATH=$PATH:/opt/coppeliaSim
     fi
-
     export _ROS_ENV_RESTORED=1
 }
 
-# Set PROMPT_COMMAND as an array so that later scripts (vte) append to it,
-# instead of overwriting it.
-PROMPT_COMMAND=()
-PROMPT_COMMAND+=("_ros_env_restore")
+# Attach to Bash or Zsh hooks dynamically
+if [ -n "$ZSH_VERSION" ]; then
+    autoload -Uz add-zsh-hook
+    add-zsh-hook precmd _ros_env_restore 2>/dev/null || precmd_functions+=(_ros_env_restore)
+elif [ -n "$BASH_VERSION" ]; then
+    if ! [[ "${PROMPT_COMMAND:-}" =~ "_ros_env_restore" ]]; then
+        PROMPT_COMMAND="_ros_env_restore; ${PROMPT_COMMAND:-}"
+    fi
+fi
 EOF
+
+# 8. Force Bash and Zsh to read our master script on every interactive launch
+RUN echo "source /opt/ros_env.sh" >> /etc/bash.bashrc \
+    && mkdir -p /etc/zsh \
+    && echo "source /opt/ros_env.sh" >> /etc/zsh/zshrc
 
 # Fix locale mismatch on container generation using distrobox
 RUN dpkg-divert --divert /usr/sbin/update-locale.distrib --rename /usr/sbin/update-locale \
