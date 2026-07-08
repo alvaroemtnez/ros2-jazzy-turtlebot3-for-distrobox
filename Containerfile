@@ -87,6 +87,7 @@ RUN cat << 'EOF' > /opt/toggle_discovery.sh
 ARG1=$1
 PORT=${2:-11811}
 XML_FILE="/tmp/fastdds_super_client.xml"
+ENV_FILE="/tmp/ros2_discovery_env.sh"
 
 # Help Menu / Usage info showing the custom terminal aliases
 show_help() {
@@ -105,7 +106,7 @@ if [ "$ARG1" = "disable" ]; then
     echo "=> Reverting network setup to standard multicast..."
     unset ROS_DISCOVERY_SERVER
     unset FASTRTPS_DEFAULT_PROFILES_FILE
-    rm -f "$XML_FILE"
+    rm -f "$XML_FILE" "$ENV_FILE"
     echo "=> Restarting ROS 2 daemon..."
     ros2 daemon stop && ros2 daemon start
     echo "=> Success! Standard multicast active."
@@ -150,8 +151,14 @@ else
 </dds>
 XML
 
+    # Create the environment file for new terminals to source
+    echo "export ROS_DISCOVERY_SERVER=\"$SERVER_IP:$PORT\"" > "$ENV_FILE"
+    echo "export FASTRTPS_DEFAULT_PROFILES_FILE=\"$XML_FILE\"" >> "$ENV_FILE"
+
+    # Export for the current terminal
     export ROS_DISCOVERY_SERVER="$SERVER_IP:$PORT"
     export FASTRTPS_DEFAULT_PROFILES_FILE="$XML_FILE"
+    
     echo "=> Exported ROS_DISCOVERY_SERVER=$ROS_DISCOVERY_SERVER"
     echo "=> Exported FASTRTPS_DEFAULT_PROFILES_FILE=$FASTRTPS_DEFAULT_PROFILES_FILE"
     echo "=> Restarting ROS 2 daemon..."
@@ -176,12 +183,24 @@ export TURTLEBOT3_MODEL=burger
 export LDS_MODEL=LDS-02
 export ROS_DOMAIN_ID=0
 
+# FIX: Gazebo fails if username has special characters
+export GZ_PARTITION="gzpart_${UID}"
+
+# Auto-load Discovery Server environment if active
+if [ -f "/tmp/ros2_discovery_env.sh" ]; then
+    source /tmp/ros2_discovery_env.sh
+fi
+
 # Discovery Server Aliases
 alias discovery-server='source /opt/toggle_discovery.sh'
 
 # Show Config
 echo "ROS_DISTRO=$ROS_DISTRO"
-echo "ROS_DOMAIN_ID=$ROS_DOMAIN_ID"
+if [ -n "$ROS_DISCOVERY_SERVER" ]; then
+    echo "ROS_DISCOVERY_SERVER=$ROS_DISCOVERY_SERVER"
+else
+    echo "ROS_DOMAIN_ID=$ROS_DOMAIN_ID"
+fi
 
 # Clean fix for WSL2 Mirrored Mode loopback timeout bug
 # Only executes if the underlying host is Windows/WSL
