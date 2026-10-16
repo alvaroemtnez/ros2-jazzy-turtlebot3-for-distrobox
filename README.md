@@ -2,7 +2,12 @@
 
 This repository contains the configuration to build and run a fully integrated robotics development and simulation environment. Built on top of **Ubuntu 24.04**, this container packages **ROS2 Jazzy**, **Gazebo Harmonic**, and **CoppeliaSim Edu v4.10.0**.
 
-It is specifically optimized for containerized deployment via **Distrobox** on immutable/traditional Linux distributions (like Fedora Silverblue, Ubuntu, or Arch) and **Windows via WSL2**. It provides out-of-the-box hardware graphics acceleration, shared network spaces for ROS2 DDS discovery, and seamless GUI display forwarding.
+It is specifically optimized for containerized deployment via **Distrobox** on immutable/traditional Linux distributions (like Fedora Silverblue, Ubuntu, or Arch), **Windows via WSL2** and **macOS (Apple Silicon) via a Linux VM**. It provides out-of-the-box hardware graphics acceleration, shared network spaces for ROS2 DDS discovery, and seamless GUI display forwarding.
+
+The image is built for both **amd64 (x86_64)** and **arm64 (aarch64)** architectures.
+
+> [!WARNING]
+> **CoppeliaSim is NOT available on ARM64.** Coppelia Robotics does not publish CoppeliaSim builds for Linux ARM64, so the ARM64 image (used on Apple Silicon Macs, ARM Linux machines, Raspberry Pi, etc.) does **not** include CoppeliaSim nor the simROS2 interface. Everything else (ROS2, Gazebo, RViz2, Nav2, TurtleBot3 packages...) is identical. If you need CoppeliaSim, use an amd64 (x86_64) machine.
 
 ---
 
@@ -63,6 +68,24 @@ sudo apt update && sudo apt install -y podman distrobox
 
 ```
 
+### macOS Hosts (Apple Silicon)
+
+Distrobox needs a Linux kernel, so on macOS you must run it inside a Linux virtual machine. The VM runs natively on Apple Silicon (no emulation), so it will use the **ARM64 image** (remember: no CoppeliaSim, see the warning above).
+
+1. **Install UTM:** Download it from [mac.getutm.app](https://mac.getutm.app/) (free) or the Mac App Store.
+
+2. **Download a Linux ARM64 ISO:** Any distro works. For example, [Ubuntu Desktop 24.04 for ARM64](https://cdimage.ubuntu.com/releases/24.04/release/) (`ubuntu-24.04.x-desktop-arm64.iso`) or [Fedora Workstation for aarch64](https://fedoraproject.org/workstation/download). Make sure you pick the **ARM64 / aarch64** version, not the x86_64 one.
+
+3. **Create the VM:** In UTM, click **Create a New Virtual Machine** → **Virtualize** (not *Emulate*) → **Linux**, and select the downloaded ISO. Recommended resources: at least **8 GB of RAM**, **4 CPU cores** and **64 GB of disk**, since Gazebo and the ROS2 stack are heavy.
+
+4. **(Recommended) Enable graphics acceleration:** Before the first boot, open the VM settings → **Display**, and select an emulated display card marked as **GPU Supported** (e.g. `virtio-gpu-gl-pci`). This gives OpenGL acceleration to Gazebo and RViz2.
+
+5. **(Only if connecting to other ROS2 instances) Use Bridged networking:** In the VM settings → **Network**, change the network mode from *Shared Network* to **Bridged (Advanced)** and select your Mac's active interface (Wi-Fi or Ethernet). This gives the VM its own IP on your LAN, which is needed for ROS2 to talk to other machines (i.e.: connect to a Turtlebot 3).
+
+6. **Install Linux and follow the Linux instructions:** Boot the VM, install the distro, and then follow the [Linux Hosts](#linux-hosts) section above and the rest of this guide from inside the VM.
+
+> **Tip:** If Gazebo crashes or renders a black window inside the VM, try launching it with software rendering: `LIBGL_ALWAYS_SOFTWARE=1 gz sim`.
+
 ---
 
 ## Quick Start Guide (Pull & Run)
@@ -92,7 +115,7 @@ distrobox enter ros2-tb3
 Once inside the container, you can run graphical applications seamlessly. If you are on Windows, these apps will pop up as individual, hardware-accelerated Windows desktop applications:
 
 * **Open RViz2:** `rviz2`
-* **Open CoppeliaSim:** `coppeliaSim.sh`
+* **Open CoppeliaSim:** `coppeliaSim.sh` (amd64 only)
 * **Open Gazebo:** `gz sim`
 
 ---
@@ -197,13 +220,95 @@ docker build -t ros2-jazzy-turtlebot3-for-distrobox:latest -f Containerfile .
 
 ```
 
+This builds the image for the architecture of the machine you run it on. On an ARM64 host, the same commands will produce an ARM64 image (without CoppeliaSim) automatically.
+
+### 3. Building the ARM64 Image from an amd64 (x86_64) Linux Host
+
+You can cross-build the ARM64 image from a regular x86_64 machine using QEMU user-mode emulation. Expect the build to be **much slower** than a native one (the whole build runs under emulation).
+
+**a) Install QEMU user-mode emulation and register it with the kernel (binfmt):**
+
+* **Ubuntu / Debian:**
+```bash
+sudo apt install -y qemu-user-static binfmt-support
+
+```
+
+* **Fedora Workstation:**
+```bash
+sudo dnf install -y qemu-user-static
+
+```
+
+* **Fedora Atomic (Silverblue, Kinoite, etc.):**
+```bash
+rpm-ostree install qemu-user-static
+reboot
+
+```
+
+* **Arch Linux:**
+```bash
+sudo pacman -S qemu-user-static qemu-user-static-binfmt
+
+```
+
+Check that ARM64 emulation works (it should print `aarch64`):
+
+```bash
+podman run --rm --platform linux/arm64 docker.io/library/ubuntu:24.04 uname -m
+
+```
+
+**b) Build the ARM64 image:**
+
+**Using Podman (Recommended):**
+
+```bash
+podman build --platform linux/arm64 -t ros2-jazzy-turtlebot3-for-distrobox:latest-arm64 -f Containerfile .
+
+```
+
+**Using Docker (Buildx):**
+
+```bash
+docker buildx build --platform linux/arm64 -t ros2-jazzy-turtlebot3-for-distrobox:latest-arm64 -f Containerfile --load .
+
+```
+
+**c) (Optional) Build a multi-architecture image for a registry:**
+
+To publish a single tag that works on both architectures (Distrobox/Podman will automatically pull the right one for each host), build both platforms into a manifest list and push it:
+
+```bash
+podman build --platform linux/amd64,linux/arm64 --manifest ros2-jazzy-turtlebot3-for-distrobox:latest -f Containerfile .
+podman manifest push --all ros2-jazzy-turtlebot3-for-distrobox:latest docker://<YOUR_REGISTRY>/ros2-jazzy-turtlebot3-for-distrobox:latest
+
+```
+
+> **Note:** If you get `Error: ...: image is not a manifest list`, a regular (single-architecture) image already exists locally with that same name, e.g. from a previous `podman pull` or `podman build`. Untag it first with `podman untag <IMAGE_NAME>:latest` (this only removes the name, the image and any distrobox created from it keep working) and run the build again.
+
+With Docker Buildx, the equivalent is:
+
+```bash
+docker buildx build --platform linux/amd64,linux/arm64 -t <YOUR_REGISTRY>/ros2-jazzy-turtlebot3-for-distrobox:latest -f Containerfile --push .
+
+```
+
 ---
 
 ## Included Packages
 
 * **Base Layer:** Ubuntu 24.04 LTS (Noble Numbat)
 * **Robotics Stack:** `ros-jazzy-desktop`, `ros-jazzy-navigation2`, `ros-jazzy-cartographer`, `ros-jazzy-slam-toolbox`, and TurtleBot3 support binaries.
-* **Simulators:** Gazebo Harmonic & CoppeliaSim Edu V4.10.0.
+* **Simulators:** Gazebo Harmonic & CoppeliaSim Edu V4.10.0 (CoppeliaSim and simROS2 interface on amd64 only).
+* **Architectures:** amd64 (x86_64) and arm64 (aarch64).
+
+---
+
+## Known Issues Patched in the Image
+
+* **Missing textures in the TurtleBot3 House world:** The `cafe_table` model shipped with `ros-jazzy-turtlebot3-gazebo` references its textures (`Wood_Floor_Dark.jpg`, `Maple.jpg`) with a wrong relative path, so the tables render untextured. The image patches `cafe_table.dae` to point to `../materials/textures/`.
 
 ---
 

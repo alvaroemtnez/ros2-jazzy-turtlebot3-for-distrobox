@@ -8,6 +8,7 @@ ENV LANG=C.UTF-8
 ENV LC_ALL=C.UTF-8
 
 # Define CoppeliaSim environment variables properly (Build + Runtime visibility)
+# NOTE: CoppeliaSim is only installed on amd64 builds (no Linux ARM64 release exists)
 ENV COPPELIASIM_ROOT_DIR=/opt/coppeliaSim
 ENV PATH="/opt/coppeliaSim:${PATH}"
 
@@ -70,22 +71,36 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# 4. Download and install CoppeliaSim Edu (clearing tarball in the same layer)
-RUN mkdir -p /opt/coppeliaSim \
-    && wget -qO /tmp/coppeliaSim.tar.xz https://downloads.coppeliarobotics.com/V4_10_0_rev0/CoppeliaSim_Edu_V4_10_0_rev0_Ubuntu24_04.tar.xz \
-    && tar -xvf /tmp/coppeliaSim.tar.xz --no-same-owner --one-top-level=/opt/coppeliaSim --strip-components=1 \
-    && rm /tmp/coppeliaSim.tar.xz
+# 4. FIX: cafe_table mesh in turtlebot3_house references its textures with a wrong relative path
+RUN sed -i \
+    's|<init_from>Wood_Floor_Dark.jpg</init_from>|<init_from>../materials/textures/Wood_Floor_Dark.jpg</init_from>|g; \
+     s|<init_from>Maple.jpg</init_from>|<init_from>../materials/textures/Maple.jpg</init_from>|g' \
+    /opt/ros/jazzy/share/turtlebot3_gazebo/models/turtlebot3_house/cafe_table/meshes/cafe_table.dae
 
-# 5. Clone and build the simROS2 interface
-RUN bash -c "source /opt/ros/jazzy/setup.bash \
-    && cd /opt \
-    && git clone https://github.com/CoppeliaRobotics/simROS2.git sim_ros2_interface \
-    && cd sim_ros2_interface \
-    && git checkout coppeliasim-v4.10.0-rev0 \
-    && echo 'geometry_msgs/msg/TwistStamped' >> meta/interfaces.txt \
-    && colcon build --symlink-install"
+# 5. Download and install CoppeliaSim Edu (amd64 only, clearing tarball in the same layer)
+RUN if [ "$(dpkg --print-architecture)" = "amd64" ]; then \
+        mkdir -p /opt/coppeliaSim \
+        && wget -qO /tmp/coppeliaSim.tar.xz https://downloads.coppeliarobotics.com/V4_10_0_rev0/CoppeliaSim_Edu_V4_10_0_rev0_Ubuntu24_04.tar.xz \
+        && tar -xvf /tmp/coppeliaSim.tar.xz --no-same-owner -C /opt/coppeliaSim --strip-components=1 \
+        && rm /tmp/coppeliaSim.tar.xz; \
+    else \
+        echo "Skipping CoppeliaSim: not available for $(dpkg --print-architecture)"; \
+    fi
 
-# 6. Embed the optimized network toggle helper script into the image
+# 6. Clone and build the simROS2 interface (amd64 only, requires CoppeliaSim)
+RUN if [ "$(dpkg --print-architecture)" = "amd64" ]; then \
+        bash -c "source /opt/ros/jazzy/setup.bash \
+        && cd /opt \
+        && git clone https://github.com/CoppeliaRobotics/simROS2.git sim_ros2_interface \
+        && cd sim_ros2_interface \
+        && git checkout coppeliasim-v4.10.0-rev0 \
+        && echo 'geometry_msgs/msg/TwistStamped' >> meta/interfaces.txt \
+        && colcon build --symlink-install"; \
+    else \
+        echo "Skipping simROS2 interface: CoppeliaSim not available for $(dpkg --print-architecture)"; \
+    fi
+
+# 7. Embed the optimized network toggle helper script into the image
 RUN cat << 'EOF' > /opt/toggle_discovery.sh
 #!/bin/bash
 
@@ -168,7 +183,7 @@ fi
 EOF
 RUN chmod +x /opt/toggle_discovery.sh
 
-# 7. Create the master ROS configuration script
+# 8. Create the master ROS configuration script
 RUN cat << 'EOF' > /opt/ros_env.sh
 # ROS2 & Turtlebot Configuration
 # Detect the active shell and source the heavily optimized ROS 2 setup script
@@ -268,7 +283,7 @@ elif [ -n "$BASH_VERSION" ]; then
 fi
 EOF
 
-# 8. Force Bash and Zsh to read our master script on every interactive launch
+# 9. Force Bash and Zsh to read our master script on every interactive launch
 RUN echo "source /opt/ros_env.sh" >> /etc/bash.bashrc \
     && mkdir -p /etc/zsh \
     && echo "source /opt/ros_env.sh" >> /etc/zsh/zshrc
