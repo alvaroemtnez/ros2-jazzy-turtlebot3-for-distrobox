@@ -320,4 +320,4 @@ Wayland APIs for Qt (qt6-wayland and qwayland5) are not included in this image. 
 
 ## AI Use Disclosure
 
-This project was made with the assistance of AI development tools (Gemini 3.1 Pro and 3.5 Flash, Claude Sonnet 4.6 Max and Deepseek V4 Pro) to accelerate coding and documentation. All generated code has been manually reviewed and thoroughly tested to ensure functionality and security.
+This project was made with the assistance of AI development tools (Claude Opus 5.5, Gemini 3.1 Pro and 3.5 Flash, Claude Sonnet 4.6 Max and Deepseek V4 Pro) to accelerate coding and documentation. All generated code has been manually reviewed and thoroughly tested to ensure functionality and security.
