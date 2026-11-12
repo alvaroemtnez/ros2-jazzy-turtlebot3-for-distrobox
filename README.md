@@ -86,6 +86,24 @@ Distrobox needs a Linux kernel, so on macOS you must run it inside a Linux virtu
 
 > **Tip:** If Gazebo crashes or renders a black window inside the VM, try launching it with software rendering: `LIBGL_ALWAYS_SOFTWARE=1 gz sim`.
 
+### Check Podman's Storage Driver (all hosts)
+
+Before pulling the image for the first time, check that this prints `overlay`:
+
+```bash
+podman info --format '{{.Store.GraphDriverName}}'
+
+```
+
+> [!WARNING]
+> **If it prints `vfs`, don't pull the image yet.** With `vfs`, the image takes more than 50 GB of disk instead of about 6 GB: the pull downloads every blob and then seems to hang while it fills the disk. This happens with old Podman versions, such as the one in **Debian 12 (bookworm)**, which use `vfs` unless a storage driver is configured. Newer versions (Debian 13, Fedora, Ubuntu 24.04...) pick `overlay` automatically. To switch to `overlay`:
+>
+> ```bash
+> mkdir -p ~/.config/containers
+> printf '[storage]\ndriver = "overlay"\n' > ~/.config/containers/storage.conf
+> podman system reset -f   # Deletes all existing Podman images and containers
+> ```
+
 ---
 
 ## Quick Start Guide (Pull & Run)
